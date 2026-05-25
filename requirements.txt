@@ -1,0 +1,6 @@
+twitchio>=2.6,<3
+aiohttp>=3.9,<4
+python-dotenv>=1.0,<2
+pytest>=7.4
+pytest-asyncio>=0.23
+aioresponses>=0.7.6
