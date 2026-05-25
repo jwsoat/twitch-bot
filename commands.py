@@ -88,3 +88,81 @@ async def cmd_bright(
     except Exception as e:
         logger.error("bright error: %s", e)
         await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+async def cmd_scene(
+    ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
+) -> None:
+    if not args:
+        await ctx.send("usage: !scene <name>")
+        return
+    entity_id = await _resolve(ctx, index, "scene", args[0])
+    if not entity_id:
+        return
+    try:
+        await ha.call_service("scene", "turn_on", {"entity_id": entity_id})
+        await ctx.send(f"scene {entity_id} activated")
+    except Exception as e:
+        logger.error("scene error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+async def cmd_play(
+    ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
+) -> None:
+    if not args:
+        await ctx.send("usage: !play <name>")
+        return
+    entity_id = await _resolve(ctx, index, "media_player", args[0])
+    if not entity_id:
+        return
+    try:
+        await ha.call_service("media_player", "media_play", {"entity_id": entity_id})
+        await ctx.send(f"playing {entity_id}")
+    except Exception as e:
+        logger.error("play error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+async def cmd_pause(
+    ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
+) -> None:
+    if not args:
+        await ctx.send("usage: !pause <name>")
+        return
+    entity_id = await _resolve(ctx, index, "media_player", args[0])
+    if not entity_id:
+        return
+    try:
+        await ha.call_service("media_player", "media_pause", {"entity_id": entity_id})
+        await ctx.send(f"paused {entity_id}")
+    except Exception as e:
+        logger.error("pause error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+async def cmd_vol(
+    ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
+) -> None:
+    if len(args) < 2:
+        await ctx.send("usage: !vol <name> <0-100>")
+        return
+    name = args[0]
+    try:
+        pct = max(0, min(100, int(args[1])))
+    except ValueError:
+        await ctx.send("usage: !vol <name> <0-100>")
+        return
+    entity_id = await _resolve(ctx, index, "media_player", name)
+    if not entity_id:
+        return
+    try:
+        await ha.call_service(
+            "media_player",
+            "volume_set",
+            {"entity_id": entity_id, "volume_level": round(pct / 100, 2)},
+        )
+        await ctx.send(f"volume {entity_id} → {pct}%")
+    except Exception as e:
+        logger.error("vol error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")

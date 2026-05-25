@@ -109,3 +109,73 @@ async def test_bright_invalid_number(imports):
     await cmd_bright(ctx, ha, idx, ["lamp", "notanumber"])
     ctx.send.assert_called_once()
     assert "usage" in ctx.send.call_args[0][0]
+
+
+# --- scene ---
+
+async def test_scene(imports):
+    from commands import cmd_scene
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("scene", "scene.party_mode", "Party Mode")
+    await cmd_scene(ctx, ha, idx, ["party"])
+    ha.call_service.assert_called_once_with(
+        "scene", "turn_on", {"entity_id": "scene.party_mode"}
+    )
+
+
+async def test_scene_no_args(imports):
+    from commands import cmd_scene
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = EntityIndex()
+    idx.build([])
+    await cmd_scene(ctx, ha, idx, [])
+    ctx.send.assert_called_once()
+    assert "usage" in ctx.send.call_args[0][0]
+
+
+# --- media ---
+
+async def test_play(imports):
+    from commands import cmd_play
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("media_player", "media_player.tv", "TV")
+    await cmd_play(ctx, ha, idx, ["tv"])
+    ha.call_service.assert_called_once_with(
+        "media_player", "media_play", {"entity_id": "media_player.tv"}
+    )
+
+
+async def test_pause(imports):
+    from commands import cmd_pause
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("media_player", "media_player.tv", "TV")
+    await cmd_pause(ctx, ha, idx, ["tv"])
+    ha.call_service.assert_called_once_with(
+        "media_player", "media_pause", {"entity_id": "media_player.tv"}
+    )
+
+
+async def test_vol_sets_fractional(imports):
+    from commands import cmd_vol
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("media_player", "media_player.tv", "TV")
+    await cmd_vol(ctx, ha, idx, ["tv", "50"])
+    ha.call_service.assert_called_once_with(
+        "media_player", "volume_set", {"entity_id": "media_player.tv", "volume_level": 0.5}
+    )
+
+
+async def test_vol_clamps_to_100(imports):
+    from commands import cmd_vol
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("media_player", "media_player.tv", "TV")
+    await cmd_vol(ctx, ha, idx, ["tv", "200"])
+    ha.call_service.assert_called_once_with(
+        "media_player", "volume_set", {"entity_id": "media_player.tv", "volume_level": 1.0}
+    )
