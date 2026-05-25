@@ -28,6 +28,13 @@ def load_config() -> Config:
             raise SystemExit(f"Missing required env var: {key}")
         return val
 
+    def req_int(key: str, default: int) -> int:
+        raw = os.getenv(key, str(default)).strip()
+        try:
+            return int(raw)
+        except ValueError:
+            raise SystemExit(f"Invalid integer for env var {key}: {raw!r}")
+
     return Config(
         twitch_token=req("TWITCH_TOKEN"),
         twitch_bot_nick=req("TWITCH_BOT_NICK"),
@@ -50,8 +57,8 @@ def load_config() -> Config:
         },
         tts_service=os.getenv("TTS_SERVICE", "tts.cloud_say"),
         tts_entity=os.getenv("TTS_ENTITY", "").strip() or None,
-        tts_cooldown_sec=int(os.getenv("TTS_COOLDOWN_SEC", "10")),
-        entity_refresh_sec=int(os.getenv("ENTITY_REFRESH_SEC", "300")),
+        tts_cooldown_sec=req_int("TTS_COOLDOWN_SEC", 10),
+        entity_refresh_sec=req_int("ENTITY_REFRESH_SEC", 300),
         command_prefix=os.getenv("COMMAND_PREFIX", "!"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )

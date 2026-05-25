@@ -34,3 +34,13 @@ def test_defaults(monkeypatch):
     assert "jwsoatmedia" in cfg.allowed_users  # stored lowercase
     assert cfg.tts_entity is None
     assert cfg.tts_cooldown_sec == 10
+
+
+def test_invalid_int_raises(monkeypatch):
+    monkeypatch.setenv("TWITCH_TOKEN", "oauth:abc")
+    monkeypatch.setenv("TWITCH_BOT_NICK", "mybot")
+    monkeypatch.setenv("HA_URL", "https://example.ui.nabu.casa")
+    monkeypatch.setenv("HA_TOKEN", "token123")
+    monkeypatch.setenv("TTS_COOLDOWN_SEC", "notanumber")
+    with pytest.raises(SystemExit):
+        load_config()
