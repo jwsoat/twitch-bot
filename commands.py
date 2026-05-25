@@ -166,3 +166,86 @@ async def cmd_vol(
     except Exception as e:
         logger.error("vol error: %s", e)
         await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+_CURTAIN_ACTIONS = {
+    "open": "open_cover",
+    "close": "close_cover",
+    "stop": "stop_cover",
+}
+
+
+async def cmd_curtain(
+    ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
+) -> None:
+    if len(args) < 2 or args[1].lower() not in _CURTAIN_ACTIONS:
+        await ctx.send("usage: !curtain <name> open|close|stop")
+        return
+    name, action = args[0], args[1].lower()
+    entity_id = await _resolve(ctx, index, "cover", name)
+    if not entity_id:
+        return
+    service = _CURTAIN_ACTIONS[action]
+    try:
+        await ha.call_service("cover", service, {"entity_id": entity_id})
+        await ctx.send(f"curtain {entity_id} {action}")
+    except Exception as e:
+        logger.error("curtain error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+class TTSRateLimiter:
+    def __init__(self, cooldown_sec: int) -> None:
+        self._cooldown = cooldown_sec
+        self._last: dict[str, float] = {}
+
+    def check(self, channel: str) -> bool:
+        now = time.monotonic()
+        if now - self._last.get(channel, 0.0) < self._cooldown:
+            return False
+        self._last[channel] = now
+        return True
+
+
+async def cmd_say(
+    ctx: ChatContext,
+    ha: HAClient,
+    tts_service: str,
+    tts_entity: str | None,
+    limiter: TTSRateLimiter,
+    channel_name: str,
+    args: list[str],
+) -> None:
+    if not tts_entity:
+        await ctx.send("TTS not configured")
+        return
+    if not args:
+        await ctx.send("usage: !say <text>")
+        return
+    if not limiter.check(channel_name):
+        await ctx.send("TTS cooldown active")
+        return
+    domain, service = tts_service.split(".", 1)
+    message = " ".join(args)
+    try:
+        await ha.call_service(
+            domain, service, {"entity_id": tts_entity, "message": message}
+        )
+        await ctx.send(f"said: {message[:50]}")
+    except Exception as e:
+        logger.error("say error: %s", e)
+        await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")
+
+
+async def cmd_entities(
+    ctx: ChatContext, index: EntityIndex, args: list[str]
+) -> None:
+    if not args:
+        await ctx.send("usage: !entities <domain>")
+        return
+    domain = args[0].lower()
+    ids = index.list_domain(domain)
+    if not ids:
+        await ctx.send(f"no {domain} entities found")
+        return
+    await ctx.send(f"{domain}: {', '.join(ids)}")

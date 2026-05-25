@@ -179,3 +179,111 @@ async def test_vol_clamps_to_100(imports):
     ha.call_service.assert_called_once_with(
         "media_player", "volume_set", {"entity_id": "media_player.tv", "volume_level": 1.0}
     )
+
+
+# --- curtain ---
+
+async def test_curtain_open(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("cover", "cover.blinds", "Blinds")
+    await cmd_curtain(ctx, ha, idx, ["blinds", "open"])
+    ha.call_service.assert_called_once_with(
+        "cover", "open_cover", {"entity_id": "cover.blinds"}
+    )
+
+
+async def test_curtain_close(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("cover", "cover.blinds", "Blinds")
+    await cmd_curtain(ctx, ha, idx, ["blinds", "close"])
+    ha.call_service.assert_called_once_with(
+        "cover", "close_cover", {"entity_id": "cover.blinds"}
+    )
+
+
+async def test_curtain_stop(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("cover", "cover.blinds", "Blinds")
+    await cmd_curtain(ctx, ha, idx, ["blinds", "stop"])
+    ha.call_service.assert_called_once_with(
+        "cover", "stop_cover", {"entity_id": "cover.blinds"}
+    )
+
+
+async def test_curtain_bad_action(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_index("cover", "cover.blinds", "Blinds")
+    await cmd_curtain(ctx, ha, idx, ["blinds", "flip"])
+    ctx.send.assert_called_once()
+    assert "usage" in ctx.send.call_args[0][0]
+
+
+# --- say ---
+
+async def test_say_calls_tts(imports):
+    from commands import cmd_say, TTSRateLimiter
+    ctx = make_ctx()
+    ha = make_ha()
+    limiter = TTSRateLimiter(cooldown_sec=0)
+    await cmd_say(ctx, ha, "tts.cloud_say", "media_player.speaker", limiter, "ch", ["hello", "world"])
+    ha.call_service.assert_called_once_with(
+        "tts", "cloud_say",
+        {"entity_id": "media_player.speaker", "message": "hello world"}
+    )
+
+
+async def test_say_no_tts_entity(imports):
+    from commands import cmd_say, TTSRateLimiter
+    ctx = make_ctx()
+    ha = make_ha()
+    limiter = TTSRateLimiter(cooldown_sec=0)
+    await cmd_say(ctx, ha, "tts.cloud_say", None, limiter, "ch", ["hello"])
+    ctx.send.assert_called_once_with("TTS not configured")
+    ha.call_service.assert_not_called()
+
+
+async def test_say_cooldown_blocks(imports):
+    from commands import cmd_say, TTSRateLimiter
+    ctx = make_ctx()
+    ha = make_ha()
+    limiter = TTSRateLimiter(cooldown_sec=9999)
+    # First call passes
+    await cmd_say(ctx, ha, "tts.cloud_say", "media_player.speaker", limiter, "ch", ["hello"])
+    # Second call blocked
+    ctx2 = make_ctx()
+    ha2 = make_ha()
+    await cmd_say(ctx2, ha2, "tts.cloud_say", "media_player.speaker", limiter, "ch", ["hello"])
+    ctx2.send.assert_called_once_with("TTS cooldown active")
+    ha2.call_service.assert_not_called()
+
+
+# --- entities ---
+
+async def test_entities_lists_domain(imports):
+    from commands import cmd_entities
+    ctx = make_ctx()
+    idx = EntityIndex()
+    idx.build([
+        {"entity_id": "light.lamp", "attributes": {"friendly_name": "Lamp"}},
+    ])
+    await cmd_entities(ctx, idx, ["light"])
+    ctx.send.assert_called_once()
+    assert "light.lamp" in ctx.send.call_args[0][0]
+
+
+async def test_entities_no_args(imports):
+    from commands import cmd_entities
+    ctx = make_ctx()
+    idx = EntityIndex()
+    idx.build([])
+    await cmd_entities(ctx, idx, [])
+    ctx.send.assert_called_once()
+    assert "usage" in ctx.send.call_args[0][0]
