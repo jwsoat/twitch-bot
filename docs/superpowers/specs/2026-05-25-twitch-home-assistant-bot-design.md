@@ -76,7 +76,7 @@ Optional:
 - `CHANNELS` — comma list, default `directorynetworks,JwsoatMedia,dylanwech,directorynetwork`
 - `ALLOWED_USERS` — comma list, default the four above
 - `TTS_SERVICE` — e.g. `tts.cloud_say` or `tts.google_translate_say`, default `tts.cloud_say`
-- `TTS_ENTITY` — media_player entity_id to speak through (required only if TTS used)
+- `TTS_ENTITY` — media_player entity_id to speak through. If unset, `!say` replies `TTS not configured` instead of erroring
 - `TTS_COOLDOWN_SEC` — default `10`
 - `ENTITY_REFRESH_SEC` — default `300`
 - `COMMAND_PREFIX` — default `!`
@@ -120,13 +120,13 @@ Commands:
 | Command | Args | HA action |
 |---|---|---|
 | `!light <name> on\|off` | name, state | `light.turn_on` / `light.turn_off`, `entity_id=<resolved>` |
-| `!color <name> <color>` | name, color word | `light.turn_on`, `color_name=<color>` |
+| `!color <name> <color>` | name, color word (CSS3 named color, e.g. `red`, `dodgerblue`) | `light.turn_on`, `color_name=<color>` |
 | `!bright <name> <0-100>` | name, pct | `light.turn_on`, `brightness_pct=<pct>` |
 | `!scene <name>` | name | `scene.turn_on` |
 | `!play <name>` | name | `media_player.media_play` |
 | `!pause <name>` | name | `media_player.media_pause` |
 | `!vol <name> <0-100>` | name, pct | `media_player.volume_set`, `volume_level=<pct/100>` |
-| `!say <text>` | free text | `<TTS_SERVICE>`, `entity_id=<TTS_ENTITY>`, `message=<text>` |
+| `!say <text>` | free text (all args after `!say` joined with spaces) | `<TTS_SERVICE>`, `entity_id=<TTS_ENTITY>`, `message=<text>` |
 | `!curtain <name> open\|close\|stop` | name, action | `cover.open_cover` / `close_cover` / `stop_cover` |
 | `!entities <domain>` | domain | reply with first 10 friendly names known for that domain |
 
