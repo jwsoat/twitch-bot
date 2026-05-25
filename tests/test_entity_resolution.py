@@ -1,5 +1,5 @@
 import pytest
-from homeassistant import EntityIndex, Match, Ambiguous, NotFound
+from ha_client import EntityIndex, Match, Ambiguous, NotFound
 
 STATES = [
     {"entity_id": "light.living_room", "attributes": {"friendly_name": "Living Room"}},

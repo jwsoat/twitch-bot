@@ -100,3 +100,6 @@ class EntityIndex:
 
     def list_domain(self, domain: str, limit: int = 10) -> list[str]:
         return [e[0] for e in self._index.get(domain, [])[:limit]]
+
+    def count(self) -> int:
+        return sum(len(v) for v in self._index.values())

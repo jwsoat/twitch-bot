@@ -1,7 +1,7 @@
 import pytest
 import aiohttp
 from aioresponses import aioresponses
-from homeassistant import HAClient
+from ha_client import HAClient
 
 BASE = "https://test.ui.nabu.casa"
 TOKEN = "testtoken123"

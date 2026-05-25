@@ -11,7 +11,7 @@ import commands as cmd_module
 from auth import is_allowed
 from commands import TTSRateLimiter
 from config import Config, load_config
-from homeassistant import EntityIndex, HAClient
+from ha_client import EntityIndex, HAClient
 
 logger = logging.getLogger("bot")
 
@@ -63,7 +63,7 @@ class TwitchBot(commands.Bot):
         try:
             states = await self._ha.get_states()
             self._index.build(states)
-            total = sum(len(v) for v in self._index._index.values())
+            total = self._index.count()
             logger.info("entity index refreshed count=%d", total)
         except Exception as e:
             logger.error("entity refresh failed: %s", e)

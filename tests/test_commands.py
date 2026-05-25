@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from homeassistant import EntityIndex, Match, NotFound, Ambiguous
+from ha_client import EntityIndex, Match, NotFound, Ambiguous
 
 
 def make_ctx(channel_name: str = "testchannel") -> MagicMock:

@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Protocol
 
-from homeassistant import HAClient, EntityIndex, Match, Ambiguous, NotFound
+from ha_client import HAClient, EntityIndex, Match, Ambiguous, NotFound
 
 logger = logging.getLogger(__name__)
 
