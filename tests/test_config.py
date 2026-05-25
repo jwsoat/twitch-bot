@@ -1,0 +1,36 @@
+import os
+import pytest
+from config import load_config
+
+
+def test_missing_required_raises(monkeypatch):
+    monkeypatch.delenv("TWITCH_TOKEN", raising=False)
+    monkeypatch.delenv("TWITCH_BOT_NICK", raising=False)
+    monkeypatch.delenv("HA_URL", raising=False)
+    monkeypatch.delenv("HA_TOKEN", raising=False)
+    with pytest.raises(SystemExit):
+        load_config()
+
+
+def test_loads_required(monkeypatch):
+    monkeypatch.setenv("TWITCH_TOKEN", "oauth:abc")
+    monkeypatch.setenv("TWITCH_BOT_NICK", "mybot")
+    monkeypatch.setenv("HA_URL", "https://example.ui.nabu.casa/")
+    monkeypatch.setenv("HA_TOKEN", "token123")
+    cfg = load_config()
+    assert cfg.twitch_token == "oauth:abc"
+    assert cfg.ha_url == "https://example.ui.nabu.casa"  # trailing slash stripped
+
+
+def test_defaults(monkeypatch):
+    monkeypatch.setenv("TWITCH_TOKEN", "oauth:abc")
+    monkeypatch.setenv("TWITCH_BOT_NICK", "mybot")
+    monkeypatch.setenv("HA_URL", "https://example.ui.nabu.casa")
+    monkeypatch.setenv("HA_TOKEN", "token123")
+    monkeypatch.delenv("CHANNELS", raising=False)
+    monkeypatch.delenv("ALLOWED_USERS", raising=False)
+    cfg = load_config()
+    assert "directorynetworks" in cfg.channels
+    assert "jwsoatmedia" in cfg.allowed_users  # stored lowercase
+    assert cfg.tts_entity is None
+    assert cfg.tts_cooldown_sec == 10
