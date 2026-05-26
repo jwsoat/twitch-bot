@@ -44,3 +44,21 @@ def test_invalid_int_raises(monkeypatch):
     monkeypatch.setenv("TTS_COOLDOWN_SEC", "notanumber")
     with pytest.raises(SystemExit):
         load_config()
+
+
+def test_db_path_default(monkeypatch):
+    for key in ("TWITCH_TOKEN", "TWITCH_BOT_NICK", "HA_URL", "HA_TOKEN"):
+        monkeypatch.setenv(key, "x")
+    monkeypatch.delenv("DB_PATH", raising=False)
+    from config import load_config
+    cfg = load_config()
+    assert cfg.db_path == "/data/bot_data.db"
+
+
+def test_db_path_custom(monkeypatch):
+    for key in ("TWITCH_TOKEN", "TWITCH_BOT_NICK", "HA_URL", "HA_TOKEN"):
+        monkeypatch.setenv(key, "x")
+    monkeypatch.setenv("DB_PATH", "/tmp/mydb.db")
+    from config import load_config
+    cfg = load_config()
+    assert cfg.db_path == "/tmp/mydb.db"

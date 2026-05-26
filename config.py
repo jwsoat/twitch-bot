@@ -19,6 +19,7 @@ class Config:
     entity_refresh_sec: int
     command_prefix: str
     log_level: str
+    db_path: str
 
 
 def load_config() -> Config:
@@ -61,4 +62,5 @@ def load_config() -> Config:
         entity_refresh_sec=req_int("ENTITY_REFRESH_SEC", 300),
         command_prefix=os.getenv("COMMAND_PREFIX", "!"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
+        db_path=os.getenv("DB_PATH", "/data/bot_data.db"),
     )
