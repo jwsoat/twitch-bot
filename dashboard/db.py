@@ -57,12 +57,14 @@ def create_custom_command(db_path: str, data: dict) -> None:
 
 def update_custom_command(db_path: str, name: str, data: dict) -> None:
     with sqlite3.connect(db_path) as con:
-        con.execute(
+        cursor = con.execute(
             "UPDATE custom_commands SET response=:response, "
             "cooldown_sec=:cooldown_sec, restricted=:restricted, "
             "enabled=:enabled WHERE name=:name",
             {**data, "name": name},
         )
+        if cursor.rowcount == 0:
+            raise ValueError(f"{name!r} not found")
         con.commit()
 
 
@@ -88,9 +90,9 @@ def list_ha_commands(db_path: str) -> list[dict]:
 
 def update_ha_command(db_path: str, name: str, data: dict) -> None:
     users = data.get("allowed_users")
-    users_json = json.dumps(users) if users else None
+    users_json = json.dumps(users) if users is not None else None
     with sqlite3.connect(db_path) as con:
-        con.execute(
+        cursor = con.execute(
             "UPDATE ha_commands SET alias=:alias, "
             "response_template=:response_template, "
             "enabled=:enabled, allowed_users=:allowed_users WHERE name=:name",
@@ -102,4 +104,6 @@ def update_ha_command(db_path: str, name: str, data: dict) -> None:
                 "name": name,
             },
         )
+        if cursor.rowcount == 0:
+            raise ValueError(f"{name!r} not found")
         con.commit()
