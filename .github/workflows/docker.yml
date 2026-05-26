@@ -26,3 +26,6 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:latest
+
+      - name: Trigger Portainer redeploy
+        run: curl -X POST "${{ secrets.PORTAINER_WEBHOOK }}"
