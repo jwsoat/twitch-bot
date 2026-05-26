@@ -1,4 +1,4 @@
 services:
   twitch-bot:
-    build: .
+    image: ghcr.io/jwsoat/twitch-bot:latest
     restart: unless-stopped
