@@ -15,3 +15,10 @@ services:
       - ENTITY_REFRESH_SEC
       - COMMAND_PREFIX
       - LOG_LEVEL
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 twitch-bot
