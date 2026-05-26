@@ -178,17 +178,27 @@ _CURTAIN_ACTIONS = {
 async def cmd_curtain(
     ctx: ChatContext, ha: HAClient, index: EntityIndex, args: list[str]
 ) -> None:
-    if len(args) < 2 or args[1].lower() not in _CURTAIN_ACTIONS:
-        await ctx.send("usage: !curtain <name> open|close|stop")
+    if not args:
+        await ctx.send("usage: !curtain open|close|stop|<0-100>")
         return
-    name, action = args[0], args[1].lower()
-    entity_id = await _resolve(ctx, index, "cover", name)
-    if not entity_id:
+    arg = args[0].lower()
+    entity_ids = index.list_domain("cover", limit=50)
+    if not entity_ids:
+        await ctx.send("no cover entities found")
         return
-    service = _CURTAIN_ACTIONS[action]
     try:
-        await ha.call_service("cover", service, {"entity_id": entity_id})
-        await ctx.send(f"curtain {entity_id} {action}")
+        if arg in _CURTAIN_ACTIONS:
+            service = _CURTAIN_ACTIONS[arg]
+            await ha.call_service("cover", service, {"entity_id": entity_ids})
+            await ctx.send(f"curtains {arg}")
+        else:
+            pos = max(0, min(100, int(arg)))
+            await ha.call_service(
+                "cover", "set_cover_position", {"entity_id": entity_ids, "position": pos}
+            )
+            await ctx.send(f"curtains → {pos}%")
+    except ValueError:
+        await ctx.send("usage: !curtain open|close|stop|<0-100>")
     except Exception as e:
         logger.error("curtain error: %s", e)
         await ctx.send(f"HA error: {getattr(e, 'status', 'unknown')}")

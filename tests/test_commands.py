@@ -183,14 +183,23 @@ async def test_vol_clamps_to_100(imports):
 
 # --- curtain ---
 
+def make_cover_index(*entity_ids: str) -> EntityIndex:
+    idx = EntityIndex()
+    idx.build([
+        {"entity_id": eid, "attributes": {"friendly_name": eid.split(".")[1]}}
+        for eid in entity_ids
+    ])
+    return idx
+
+
 async def test_curtain_open(imports):
     from commands import cmd_curtain
     ctx = make_ctx()
     ha = make_ha()
-    idx = make_index("cover", "cover.blinds", "Blinds")
-    await cmd_curtain(ctx, ha, idx, ["blinds", "open"])
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["open"])
     ha.call_service.assert_called_once_with(
-        "cover", "open_cover", {"entity_id": "cover.blinds"}
+        "cover", "open_cover", {"entity_id": ["cover.blinds"]}
     )
 
 
@@ -198,10 +207,10 @@ async def test_curtain_close(imports):
     from commands import cmd_curtain
     ctx = make_ctx()
     ha = make_ha()
-    idx = make_index("cover", "cover.blinds", "Blinds")
-    await cmd_curtain(ctx, ha, idx, ["blinds", "close"])
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["close"])
     ha.call_service.assert_called_once_with(
-        "cover", "close_cover", {"entity_id": "cover.blinds"}
+        "cover", "close_cover", {"entity_id": ["cover.blinds"]}
     )
 
 
@@ -209,10 +218,32 @@ async def test_curtain_stop(imports):
     from commands import cmd_curtain
     ctx = make_ctx()
     ha = make_ha()
-    idx = make_index("cover", "cover.blinds", "Blinds")
-    await cmd_curtain(ctx, ha, idx, ["blinds", "stop"])
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["stop"])
     ha.call_service.assert_called_once_with(
-        "cover", "stop_cover", {"entity_id": "cover.blinds"}
+        "cover", "stop_cover", {"entity_id": ["cover.blinds"]}
+    )
+
+
+async def test_curtain_position(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["33"])
+    ha.call_service.assert_called_once_with(
+        "cover", "set_cover_position", {"entity_id": ["cover.blinds"], "position": 33}
+    )
+
+
+async def test_curtain_position_clamps(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["150"])
+    ha.call_service.assert_called_once_with(
+        "cover", "set_cover_position", {"entity_id": ["cover.blinds"], "position": 100}
     )
 
 
@@ -220,10 +251,21 @@ async def test_curtain_bad_action(imports):
     from commands import cmd_curtain
     ctx = make_ctx()
     ha = make_ha()
-    idx = make_index("cover", "cover.blinds", "Blinds")
-    await cmd_curtain(ctx, ha, idx, ["blinds", "flip"])
+    idx = make_cover_index("cover.blinds")
+    await cmd_curtain(ctx, ha, idx, ["flip"])
     ctx.send.assert_called_once()
     assert "usage" in ctx.send.call_args[0][0]
+
+
+async def test_curtain_no_covers(imports):
+    from commands import cmd_curtain
+    ctx = make_ctx()
+    ha = make_ha()
+    idx = EntityIndex()
+    idx.build([])
+    await cmd_curtain(ctx, ha, idx, ["open"])
+    ctx.send.assert_called_once_with("no cover entities found")
+    ha.call_service.assert_not_called()
 
 
 # --- say ---
