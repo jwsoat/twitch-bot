@@ -1,9 +1,11 @@
 from __future__ import annotations
 import json
+import logging
 import os
 import sqlite3
 from dataclasses import dataclass
-from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -18,10 +20,10 @@ class CustomCommand:
 @dataclass
 class HAOverride:
     name: str
-    alias: Optional[str]
-    response_template: Optional[str]
+    alias: str | None
+    response_template: str | None
     enabled: bool
-    allowed_users: Optional[list[str]]  # None = use global allowlist
+    allowed_users: list[str] | None  # None = use global allowlist
 
 
 def _db_path() -> str:
@@ -42,7 +44,8 @@ def get_custom_commands() -> list[CustomCommand]:
             )
             for r in rows
         ]
-    except Exception:
+    except Exception as e:
+        logger.warning("store read failed: %s", e)
         return []
 
 
@@ -58,10 +61,15 @@ def get_ha_override(name: str) -> HAOverride:
             return HAOverride(name=name, alias=None, response_template=None,
                               enabled=True, allowed_users=None)
         users = json.loads(row[4]) if row[4] else None
+        if users is not None and not isinstance(users, list):
+            users = None
         return HAOverride(
             name=row[0], alias=row[1], response_template=row[2],
             enabled=bool(row[3]), allowed_users=users,
         )
-    except Exception:
+    except Exception as e:
+        # On DB error, return permissive defaults so the bot keeps running.
+        # Commands fall back to global allowlist rather than silently blocking.
+        logger.warning("store read failed: %s", e)
         return HAOverride(name=name, alias=None, response_template=None,
                           enabled=True, allowed_users=None)

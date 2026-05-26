@@ -87,3 +87,11 @@ def test_get_ha_override_missing_db(monkeypatch):
     monkeypatch.setenv("DB_PATH", "/nonexistent/path.db")
     override = get_ha_override("light")
     assert override.enabled is True  # safe default
+
+
+def test_get_ha_override_malformed_allowed_users(db_path):
+    with sqlite3.connect(db_path) as con:
+        con.execute("INSERT INTO ha_commands VALUES ('light',NULL,NULL,1,'\"not-a-list\"')")
+        con.commit()
+    override = get_ha_override("light")
+    assert override.allowed_users is None  # malformed JSON falls back to None
