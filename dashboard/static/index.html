@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitch Bot Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0e0e10; color: #efeff1; min-height: 100vh; }
+  #login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .card { background: #18181b; border-radius: 8px; padding: 2rem; width: 320px; }
+  .card h1 { font-size: 1.25rem; margin-bottom: 1.5rem; color: #bf94ff; }
+  input { width: 100%; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; background: #26262c;
+          border: 1px solid #3a3a3f; border-radius: 4px; color: #efeff1; font-size: 0.9rem; }
+  button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+  .btn-primary { background: #bf94ff; color: #0e0e10; font-weight: 600; }
+  .btn-primary:hover { background: #a970ff; }
+  .btn-danger { background: #eb0400; color: #fff; }
+  .btn-small { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+  .btn-save { background: #00b894; color: #fff; }
+  .error { color: #eb0400; font-size: 0.85rem; margin-top: 0.5rem; }
+  #dashboard-page { display: none; }
+  .header { background: #18181b; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { color: #bf94ff; font-size: 1.1rem; }
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #26262c; padding: 0 2rem; background: #18181b; }
+  .tab-btn { padding: 0.75rem 1.5rem; background: none; border: none; color: #adadb8; cursor: pointer;
+             border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 0.95rem; }
+  .tab-btn.active { color: #bf94ff; border-bottom-color: #bf94ff; }
+  .tab-content { padding: 2rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; padding: 0.6rem 0.75rem; background: #26262c; color: #adadb8; font-weight: 500; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #26262c; vertical-align: middle; }
+  td input, td select { background: #26262c; border: 1px solid #3a3a3f; border-radius: 4px;
+                         color: #efeff1; padding: 0.3rem 0.5rem; font-size: 0.85rem; width: 100%; }
+  .add-row { margin-bottom: 1rem; }
+  .status { font-size: 0.8rem; color: #adadb8; margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page">
+  <div class="card">
+    <h1>🤖 Bot Dashboard</h1>
+    <form id="login-form">
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit" class="btn-primary" style="width:100%">Login</button>
+      <p class="error" id="login-error" style="display:none">Invalid credentials</p>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-page">
+  <div class="header">
+    <h1>🤖 Twitch Bot Dashboard</h1>
+    <button class="btn-primary btn-small" onclick="logout()">Logout</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('custom', this)">Custom Commands</button>
+    <button class="tab-btn" onclick="switchTab('ha', this)">HA Commands</button>
+  </div>
+
+  <!-- CUSTOM COMMANDS TAB -->
+  <div id="tab-custom" class="tab-content">
+    <div class="add-row">
+      <button class="btn-primary btn-small" onclick="addCustomRow()">+ Add Command</button>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Command</th><th>Response</th><th>Cooldown (s)</th>
+        <th>Restricted</th><th>Enabled</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="custom-tbody"></tbody>
+    </table>
+    <p class="status" id="custom-status"></p>
+  </div>
+
+  <!-- HA COMMANDS TAB -->
+  <div id="tab-ha" class="tab-content" style="display:none">
+    <table>
+      <thead><tr>
+        <th>Command</th><th>Alias</th><th>Custom Response</th>
+        <th>Allowed Users</th><th>Enabled</th><th></th>
+      </tr></thead>
+      <tbody id="ha-tbody"></tbody>
+    </table>
+    <p class="status" id="ha-status"></p>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('bot_token');
+
+function api(method, path, body) {
+  return fetch(path, {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+function showPage() {
+  if (token) {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('dashboard-page').style.display = 'block';
+    loadCustomCommands();
+  } else {
+    document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('dashboard-page').style.display = 'none';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('bot_token');
+  token = null;
+  showPage();
+}
+
+document.getElementById('login-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = new URLSearchParams({
+    username: document.getElementById('username').value,
+    password: document.getElementById('password').value,
+  });
+  const res = await fetch('/auth/token', { method: 'POST', body });
+  if (res.ok) {
+    token = (await res.json()).access_token;
+    localStorage.setItem('bot_token', token);
+    document.getElementById('login-error').style.display = 'none';
+    showPage();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+};
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-custom').style.display = name === 'custom' ? 'block' : 'none';
+  document.getElementById('tab-ha').style.display = name === 'ha' ? 'block' : 'none';
+  if (name === 'ha') loadHACommands();
+}
+
+// --- CUSTOM COMMANDS ---
+
+async function loadCustomCommands() {
+  const res = await api('GET', '/api/custom');
+  if (res.status === 401) { logout(); return; }
+  const cmds = await res.json();
+  const tbody = document.getElementById('custom-tbody');
+  tbody.innerHTML = '';
+  cmds.forEach(cmd => tbody.appendChild(customRow(cmd)));
+}
+
+function customRow(cmd) {
+  const tr = document.createElement('tr');
+  tr.dataset.name = cmd.name;
+  tr.innerHTML = `
+    <td>!<strong>${cmd.name}</strong></td>
+    <td><input type="text" value="${esc(cmd.response)}" class="c-response"></td>
+    <td><input type="number" value="${cmd.cooldown_sec}" min="0" style="width:70px" class="c-cooldown"></td>
+    <td><input type="checkbox" class="c-restricted" ${cmd.restricted ? 'checked' : ''}></td>
+    <td><input type="checkbox" class="c-enabled" ${cmd.enabled ? 'checked' : ''}></td>
+    <td>
+      <button class="btn-save btn-small" onclick="saveCustom(this)">Save</button>
+      <button class="btn-danger btn-small" onclick="deleteCustom(this)" style="margin-left:4px">Del</button>
+    </td>`;
+  return tr;
+}
+
+function addCustomRow() {
+  const tr = document.createElement('tr');
+  tr.dataset.name = '';
+  tr.innerHTML = `
+    <td>!<input type="text" placeholder="name" class="c-name" style="width:90px"></td>
+    <td><input type="text" placeholder="response text" class="c-response"></td>
+    <td><input type="number" value="0" min="0" style="width:70px" class="c-cooldown"></td>
+    <td><input type="checkbox" class="c-restricted"></td>
+    <td><input type="checkbox" class="c-enabled" checked></td>
+    <td>
+      <button class="btn-save btn-small" onclick="createCustom(this)">Add</button>
+      <button class="btn-small" onclick="this.closest('tr').remove()" style="background:#3a3a3f;color:#efeff1;margin-left:4px">Cancel</button>
+    </td>`;
+  document.getElementById('custom-tbody').prepend(tr);
+}
+
+async function createCustom(btn) {
+  const tr = btn.closest('tr');
+  const name = tr.querySelector('.c-name').value.trim().toLowerCase().replace(/^!/, '');
+  if (!name) { alert('Command name required'); return; }
+  const body = {
+    name,
+    response: tr.querySelector('.c-response').value,
+    cooldown_sec: parseInt(tr.querySelector('.c-cooldown').value) || 0,
+    restricted: tr.querySelector('.c-restricted').checked,
+    enabled: tr.querySelector('.c-enabled').checked,
+  };
+  const res = await api('POST', '/api/custom', body);
+  if (res.ok) { status('custom', 'Saved!'); loadCustomCommands(); }
+  else { status('custom', 'Error saving'); }
+}
+
+async function saveCustom(btn) {
+  const tr = btn.closest('tr');
+  const name = tr.dataset.name;
+  const body = {
+    response: tr.querySelector('.c-response').value,
+    cooldown_sec: parseInt(tr.querySelector('.c-cooldown').value) || 0,
+    restricted: tr.querySelector('.c-restricted').checked,
+    enabled: tr.querySelector('.c-enabled').checked,
+  };
+  const res = await api('PUT', '/api/custom/' + name, body);
+  status('custom', res.ok ? 'Saved!' : 'Error saving');
+}
+
+async function deleteCustom(btn) {
+  const tr = btn.closest('tr');
+  if (!confirm('Delete !' + tr.dataset.name + '?')) return;
+  const res = await api('DELETE', '/api/custom/' + tr.dataset.name);
+  if (res.ok) { tr.remove(); status('custom', 'Deleted'); }
+}
+
+// --- HA COMMANDS ---
+
+async function loadHACommands() {
+  const res = await api('GET', '/api/ha');
+  if (res.status === 401) { logout(); return; }
+  const cmds = await res.json();
+  const tbody = document.getElementById('ha-tbody');
+  tbody.innerHTML = '';
+  cmds.forEach(cmd => tbody.appendChild(haRow(cmd)));
+}
+
+function haRow(cmd) {
+  const tr = document.createElement('tr');
+  tr.dataset.name = cmd.name;
+  const users = (cmd.allowed_users || []).join(', ');
+  tr.innerHTML = `
+    <td><strong>!${cmd.name}</strong></td>
+    <td><input type="text" value="${esc(cmd.alias || '')}" placeholder="(default)" class="ha-alias"></td>
+    <td><input type="text" value="${esc(cmd.response_template || '')}" placeholder="(default)" class="ha-response"></td>
+    <td><input type="text" value="${esc(users)}" placeholder="(global list)" class="ha-users"></td>
+    <td><input type="checkbox" class="ha-enabled" ${cmd.enabled ? 'checked' : ''}></td>
+    <td><button class="btn-save btn-small" onclick="saveHA(this)">Save</button></td>`;
+  return tr;
+}
+
+async function saveHA(btn) {
+  const tr = btn.closest('tr');
+  const name = tr.dataset.name;
+  const usersRaw = tr.querySelector('.ha-users').value.trim();
+  const users = usersRaw ? usersRaw.split(',').map(u => u.trim()).filter(Boolean) : [];
+  const body = {
+    alias: tr.querySelector('.ha-alias').value.trim() || null,
+    response_template: tr.querySelector('.ha-response').value.trim() || null,
+    enabled: tr.querySelector('.ha-enabled').checked,
+    allowed_users: users,
+  };
+  const res = await api('PUT', '/api/ha/' + name, body);
+  status('ha', res.ok ? 'Saved!' : 'Error saving');
+}
+
+function status(tab, msg) {
+  const el = document.getElementById(tab + '-status');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+showPage();
+</script>
+</body>
+</html>
