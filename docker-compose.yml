@@ -2,3 +2,16 @@ services:
   twitch-bot:
     image: ghcr.io/jwsoat/twitch-bot:latest
     restart: unless-stopped
+    environment:
+      - TWITCH_TOKEN
+      - TWITCH_BOT_NICK
+      - HA_URL
+      - HA_TOKEN
+      - CHANNELS
+      - ALLOWED_USERS
+      - TTS_SERVICE
+      - TTS_ENTITY
+      - TTS_COOLDOWN_SEC
+      - ENTITY_REFRESH_SEC
+      - COMMAND_PREFIX
+      - LOG_LEVEL
