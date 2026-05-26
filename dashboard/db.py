@@ -45,14 +45,17 @@ def list_custom_commands(db_path: str) -> list[dict]:
 
 
 def create_custom_command(db_path: str, data: dict) -> None:
-    with sqlite3.connect(db_path) as con:
-        con.execute(
-            "INSERT INTO custom_commands "
-            "(name, response, cooldown_sec, restricted, enabled) "
-            "VALUES (:name, :response, :cooldown_sec, :restricted, :enabled)",
-            data,
-        )
-        con.commit()
+    try:
+        with sqlite3.connect(db_path) as con:
+            con.execute(
+                "INSERT INTO custom_commands "
+                "(name, response, cooldown_sec, restricted, enabled) "
+                "VALUES (:name, :response, :cooldown_sec, :restricted, :enabled)",
+                data,
+            )
+            con.commit()
+    except sqlite3.IntegrityError:
+        raise ValueError(f"{data['name']!r} already exists")
 
 
 def update_custom_command(db_path: str, name: str, data: dict) -> None:
@@ -70,7 +73,9 @@ def update_custom_command(db_path: str, name: str, data: dict) -> None:
 
 def delete_custom_command(db_path: str, name: str) -> None:
     with sqlite3.connect(db_path) as con:
-        con.execute("DELETE FROM custom_commands WHERE name = ?", (name,))
+        cursor = con.execute("DELETE FROM custom_commands WHERE name = ?", (name,))
+        if cursor.rowcount == 0:
+            raise ValueError(f"{name!r} not found")
         con.commit()
 
 

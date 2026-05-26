@@ -116,3 +116,20 @@ def test_update_ha_command_empty_allowed_users_roundtrip(db_path):
     ha = list_ha_commands(db_path)
     light = next(r for r in ha if r["name"] == "light")
     assert light["allowed_users"] == []
+
+
+def test_delete_custom_command_not_found(db_path):
+    with pytest.raises(ValueError):
+        delete_custom_command(db_path, "nonexistent")
+
+
+def test_create_custom_command_duplicate(db_path):
+    create_custom_command(db_path, {
+        "name": "discord", "response": "discord.gg/xyz",
+        "cooldown_sec": 0, "restricted": 0, "enabled": 1,
+    })
+    with pytest.raises(ValueError):
+        create_custom_command(db_path, {
+            "name": "discord", "response": "discord.gg/xyz",
+            "cooldown_sec": 0, "restricted": 0, "enabled": 1,
+        })
