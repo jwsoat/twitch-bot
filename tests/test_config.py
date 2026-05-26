@@ -29,6 +29,7 @@ def test_defaults(monkeypatch):
     monkeypatch.setenv("HA_TOKEN", "token123")
     monkeypatch.delenv("CHANNELS", raising=False)
     monkeypatch.delenv("ALLOWED_USERS", raising=False)
+    monkeypatch.delenv("TTS_ENTITY", raising=False)
     cfg = load_config()
     assert "directorynetworks" in cfg.channels
     assert "jwsoatmedia" in cfg.allowed_users  # stored lowercase
